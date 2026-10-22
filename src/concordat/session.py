@@ -24,13 +24,17 @@ class Session:
     def allowed_actions(self) -> frozenset[str]:
         return self.protocol.actions(self.state)
 
-    def step(self, action: str, to: str | None = None) -> None:
-        """Take ``action`` and move to ``to`` (optional when the action has one target)."""
+    def check(self, action: str) -> None:
+        """Raise ``ProtocolViolation`` unless ``action`` is allowed in the current state."""
         if action not in self.allowed_actions():
             raise ProtocolViolation(
                 f"{action!r} is not allowed in state {self.state!r}; "
                 f"allowed: {sorted(self.allowed_actions())}"
             )
+
+    def step(self, action: str, to: str | None = None) -> None:
+        """Take ``action`` and move to ``to`` (optional when the action has one target)."""
+        self.check(action)
         targets = self.protocol.targets(self.state, action)
         if to is None and len(targets) == 1:
             (to,) = targets

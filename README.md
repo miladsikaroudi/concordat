@@ -3,8 +3,8 @@
 **Typed sessions for AI agents.** Agents are objects whose interfaces are protocols,
 and the runtime enforces those protocols on the model.
 
-> Status: pre-alpha. The protocol/session/budget kernel works; the `Agent` class and
-> provider adapters are next. See [docs/design.md](docs/design.md).
+> Status: pre-alpha. Agent classes and the protocol/session/budget kernel work;
+> provider adapters (OpenAI, Anthropic) are next. See [docs/design.md](docs/design.md).
 
 ## Why
 
@@ -16,6 +16,32 @@ Concordat makes it a checked protocol:
 - **Bounded spend:** tokens, tool calls and dollars stay within budget, even across handoffs.
 
 ## Example
+
+```python
+from concordat import Agent, Budget, human, tool
+
+class RefundAgent(Agent):
+    final = {"refunded", "denied"}
+    budget = Budget(tool_calls=10)
+
+    @tool(when="start", then={True: "verified", False: "denied"})
+    def verify_identity(self, user_id: str) -> bool:
+        return lookup(user_id).verified
+
+    @tool(when="verified", then="awaiting_approval")
+    def propose_refund(self, amount: float) -> float:
+        return amount
+
+    @human(when="awaiting_approval", approve="refunded", reject="denied")
+    def approve_refund(self, amount: float) -> str:
+        return f"Refund ${amount}?"         # shown to the human approver
+
+agent = RefundAgent()          # protocol already checked when the class was defined
+agent.allowed_tools()          # {'verify_identity': ...}: all the model gets to see
+agent.propose_refund(5000)     # ProtocolViolation, raised before the body runs
+```
+
+The same thing without classes, using the kernel directly:
 
 ```python
 from concordat import Budget, Protocol, Session

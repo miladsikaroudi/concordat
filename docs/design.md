@@ -58,29 +58,43 @@ Then a **monitor** validates whatever comes back before any side effect runs.
 Layer 1–2 prevent most violations; layer 3 catches the rest, so it works even with
 providers that offer no decoding control.
 
-## Planned surface (v0.1)
+## Agent classes
 
 ```python
 class RefundAgent(Agent):
+    final = {"refunded", "denied"}          # initial state defaults to "start"
     budget = Budget(tokens=50_000, tool_calls=10)
 
-    @tool(when="start", then={"verified", "denied"})
+    @tool(when="start", then={True: "verified", False: "denied"})
     def verify_identity(self, user_id: str) -> bool: ...
 
-    @tool(when="verified", then={"awaiting_approval"})
+    @tool(when="verified", then="awaiting_approval")
     def propose_refund(self, amount: float) -> Proposal: ...
 
     @human(when="awaiting_approval", approve="refunded", reject="denied")
-    def approve_refund(self, proposal: Proposal): ...
+    def approve_refund(self, proposal: Proposal) -> str:
+        return f"Refund {proposal.amount}?"   # shown to the approver
 ```
 
-The decorators compile to a `Protocol`; the class is checked when it is defined.
+- The decorators compile to a `Protocol`, checked when the class is defined; a bad
+  protocol is a `ProtocolError` at import time.
+- Declaring `final` makes a class concrete. Classes without it are abstract bases,
+  so protocols can be specialised by inheritance.
+- Calling a tool outside its state raises `ProtocolViolation` *before* the body
+  runs. Each call charges one tool call to the instance's own copy of the budget.
+- `then` is a single next state, or a mapping from the method's return value to the
+  next state. Branching is chosen by the tool result, or by which of several
+  allowed tools the model calls.
+- `@human` steps are hidden from the model (`allowed_tools()` excludes them). The
+  method's return value goes to the agent's `approver`, which returns the decision.
+- Decorated methods keep their signatures for type checkers.
 
 ## Scope
 
 **v0.1 (this milestone)**
-- `Protocol`, `Session`, `Budget` kernel with definition-time checks — *done in scaffold*
-- `Agent` class + decorators on top of the kernel
+- `Protocol`, `Session`, `Budget` kernel with definition-time checks — *done*
+- `Agent` class with `@tool` / `@human` decorators — *done (sync only)*
+- Async tools and approvers
 - Provider adapters: OpenAI, Anthropic (allowed tools + structured output per state)
 - Human approval connector (CLI first)
 - Showcase: a τ³-bench airline or retail domain, typed vs. untyped agent
@@ -111,5 +125,4 @@ The decorators compile to a `Protocol`; the class is checked when it is defined.
 ## Open questions
 
 - How to declare "free" regions where the model may loop without strict ordering.
-- Whether branching should be chosen by the tool result or by the model.
 - How strict to be by default: reject, retry with feedback, or escalate to a human.
