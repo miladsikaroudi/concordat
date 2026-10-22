@@ -3,8 +3,8 @@
 **Typed sessions for AI agents.** Agents are objects whose interfaces are protocols,
 and the runtime enforces those protocols on the model.
 
-> Status: pre-alpha. Agent classes and the protocol/session/budget kernel work;
-> provider adapters (OpenAI, Anthropic) are next. See [docs/design.md](docs/design.md).
+> Status: pre-alpha. Agent classes, the protocol/session/budget kernel and a Claude
+> (Anthropic) runner work; an OpenAI runner is next. See [docs/design.md](docs/design.md).
 
 ## Why
 
@@ -41,7 +41,29 @@ agent.allowed_tools()          # {'verify_identity': ...}: all the model gets to
 agent.propose_refund(5000)     # ProtocolViolation, raised before the body runs
 ```
 
-The same thing without classes, using the kernel directly:
+### Running it with Claude
+
+```bash
+pip install "concordat[anthropic]"
+```
+
+```python
+import anthropic
+from concordat.anthropic import run
+
+result = run(RefundAgent(), anthropic.Anthropic(), "Please refund order A-100.")
+result.status   # "done", or "waiting" if Claude asked the user something
+```
+
+Each turn Claude is offered only the actions legal in the current state (a human
+step appears as a request that only the approver can decide), one call per
+response. Every response's tokens are charged to the agent's budget, and the next
+response is capped to what is left. Illegal or invalid calls go back to Claude as
+errors so it can correct itself. See [examples/refund.py](examples/refund.py).
+
+### Without classes
+
+The same protocol, using the kernel directly:
 
 ```python
 from concordat import Budget, Protocol, Session

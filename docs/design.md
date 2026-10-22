@@ -85,8 +85,10 @@ class RefundAgent(Agent):
 - `then` is a single next state, or a mapping from the method's return value to the
   next state. Branching is chosen by the tool result, or by which of several
   allowed tools the model calls.
-- `@human` steps are hidden from the model (`allowed_tools()` excludes them). The
-  method's return value goes to the agent's `approver`, which returns the decision.
+- `@human` steps can be *requested* by the model but only *decided* by the agent's
+  `approver`, which receives the method's return value. Offering the request keeps
+  the model from stalling in a state where only a human can move the protocol on.
+- `instructions` is the agent's system prompt.
 - Decorated methods keep their signatures for type checkers.
 
 ## Scope
@@ -95,7 +97,10 @@ class RefundAgent(Agent):
 - `Protocol`, `Session`, `Budget` kernel with definition-time checks — *done*
 - `Agent` class with `@tool` / `@human` decorators — *done (sync only)*
 - Async tools and approvers
-- Provider adapters: OpenAI, Anthropic (allowed tools + structured output per state)
+- Anthropic runner (`concordat.anthropic.run`): allowed tools per state, one call
+  per response, token charging with per-response caps, refusal fallbacks — *done*
+- OpenAI runner
+- Output schema per state (structured outputs), beyond tool arguments
 - Human approval connector (CLI first)
 - Showcase: a τ³-bench airline or retail domain, typed vs. untyped agent
 

@@ -17,8 +17,18 @@ classifiers = [
 [project.urls]
 Repository = "https://github.com/miladsikaroudi/concordat"
 
+[project.optional-dependencies]
+anthropic = [
+    "anthropic>=1.12,<2",
+]
+
 [dependency-groups]
-dev = ["pytest>=8", "mypy>=1.10", "ruff>=0.5"]
+dev = [
+    "pytest>=8",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    "anthropic==1.12.1",
+]
 
 [build-system]
 requires = ["hatchling>=1.27"]

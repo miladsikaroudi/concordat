@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import functools
+import inspect
 from collections.abc import Callable, Collection, Iterable, Mapping
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import Any, ClassVar, Concatenate, Generic, ParamSpec, TypeVar, overload
 
 from .budget import Budget
@@ -21,6 +22,16 @@ def cli_approver(step: str, request: Any) -> bool:
     return answer.strip().lower() in {"y", "yes"}
 
 
+@dataclass(frozen=True)
+class Action:
+    """Something the model may do in the current state: call a tool, or ask a human."""
+
+    name: str
+    description: str
+    call: Callable[..., Any]
+    human: bool
+
+
 class _Step(Generic[P, R]):
     """An agent method that is also a protocol action, legal only in state ``when``."""
 
@@ -29,6 +40,8 @@ class _Step(Generic[P, R]):
         self.when = when
         self.targets = frozenset(targets)
         self.name = fn.__name__
+        signature = inspect.signature(fn)
+        self.signature = signature.replace(parameters=list(signature.parameters.values())[1:])
 
     def __set_name__(self, owner: type, name: str) -> None:
         self.name = name
@@ -48,6 +61,7 @@ class _Step(Generic[P, R]):
             agent.session.check(self.name)  # before any side effect
             return self._run(agent, *args, **kwargs)
 
+        bound.__signature__ = self.signature  # type: ignore[attr-defined]  # without self
         return bound
 
     def _run(self, agent: Agent, *args: P.args, **kwargs: P.kwargs) -> R:
@@ -111,9 +125,10 @@ def tool(
 def human(
     when: str, approve: str, reject: str
 ) -> Callable[[Callable[Concatenate[Any, P], Any]], _Human[P]]:
-    """A decision a human makes in state ``when``; the model can't call it.
+    """A decision a human makes in state ``when``.
 
-    The method's return value is shown to the approver, and calling it returns the decision.
+    The model may request it, but only the approver decides: the method's return value
+    is shown to the approver, and calling the method returns the decision.
     """
 
     def decorate(fn: Callable[Concatenate[Any, P], Any]) -> _Human[P]:
@@ -129,6 +144,7 @@ class Agent:
     the class is defined. Classes without ``final`` are abstract bases to inherit from.
     """
 
+    instructions: ClassVar[str] = ""  # the system prompt for model-driven runs
     initial: ClassVar[str] = "start"
     final: ClassVar[Collection[str]] = ()
     budget: Budget = Budget()  # a template: each instance gets its own copy
@@ -170,10 +186,12 @@ class Agent:
     def done(self) -> bool:
         return self.session.done
 
-    def allowed_tools(self) -> dict[str, Callable[..., Any]]:
-        """The tools the model may call right now, bound to this agent."""
-        return {
-            name: getattr(self, name)
-            for name in sorted(self.session.allowed_actions())
-            if isinstance(self._steps[name], _Tool)
-        }
+    def allowed_tools(self) -> dict[str, Action]:
+        """What the model may do right now; everything else is withheld from it."""
+        actions = {}
+        for name in sorted(self.session.allowed_actions()):
+            step = self._steps[name]
+            description = inspect.getdoc(step.fn) or ""
+            human = isinstance(step, _Human)
+            actions[name] = Action(name, description, getattr(self, name), human)
+        return actions

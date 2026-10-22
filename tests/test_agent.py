@@ -78,13 +78,21 @@ def test_out_of_order_call_is_rejected_before_it_runs() -> None:
     assert agent.state == "start"
 
 
-def test_allowed_tools_follow_the_state_and_exclude_humans() -> None:
+def test_allowed_tools_follow_the_state() -> None:
     agent = RefundAgent()
     assert list(agent.allowed_tools()) == ["verify_identity"]
     agent.verify_identity("u1")
     assert list(agent.allowed_tools()) == ["propose_refund"]
     agent.propose_refund(10.0)
-    assert agent.allowed_tools() == {}  # only the human can act now
+    [request] = agent.allowed_tools().values()
+    assert (request.name, request.human) == ("approve_refund", True)
+
+
+def test_bound_methods_drop_self_from_their_signature() -> None:
+    import inspect
+
+    action = RefundAgent().allowed_tools()["verify_identity"]
+    assert list(inspect.signature(action.call).parameters) == ["user_id"]
 
 
 def test_tool_calls_are_charged_per_instance() -> None:
