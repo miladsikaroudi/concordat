@@ -21,6 +21,9 @@ Repository = "https://github.com/miladsikaroudi/concordat"
 anthropic = [
     "anthropic>=1.12,<2",
 ]
+openai = [
+    "openai>=3.26,<4",
+]
 
 [dependency-groups]
 dev = [
@@ -28,6 +31,7 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.5",
     "anthropic==1.12.1",
+    "openai==3.26.1",
 ]
 
 [build-system]

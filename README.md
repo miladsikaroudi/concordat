@@ -3,8 +3,8 @@
 **Typed sessions for AI agents.** Agents are objects whose interfaces are protocols,
 and the runtime enforces those protocols on the model.
 
-> Status: pre-alpha. Agent classes, the protocol/session/budget kernel and a Claude
-> (Anthropic) runner work; an OpenAI runner is next. See [docs/design.md](docs/design.md).
+> Status: pre-alpha. Agent classes, the protocol/session/budget kernel, and runners for
+> Claude (Anthropic) and OpenAI work. See [docs/design.md](docs/design.md).
 
 ## Why
 
@@ -60,6 +60,17 @@ step appears as a request that only the approver can decide), one call per
 response. Every response's tokens are charged to the agent's budget, and the next
 response is capped to what is left. Illegal or invalid calls go back to Claude as
 errors so it can correct itself. See [examples/refund.py](examples/refund.py).
+
+### Running it with OpenAI
+
+The same loop over the Responses API (`pip install "concordat[openai]"`):
+
+```python
+import openai
+from concordat.openai import run
+
+result = run(RefundAgent(), openai.OpenAI(), "Please refund order A-100.", model="...")
+```
 
 ### Without classes
 
