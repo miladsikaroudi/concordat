@@ -6,16 +6,27 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
+authors = [{ name = "miladsikaroudi" }]
 dependencies = []
-keywords = ["agents", "llm", "session types", "typestate", "protocols"]
+keywords = ["agents", "llm", "session types", "typestate", "protocols", "claude", "openai"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Typing :: Typed",
 ]
 
 [project.urls]
+Homepage = "https://github.com/miladsikaroudi/concordat"
 Repository = "https://github.com/miladsikaroudi/concordat"
+Issues = "https://github.com/miladsikaroudi/concordat/issues"
+Documentation = "https://github.com/miladsikaroudi/concordat/blob/main/docs/design.md"
 
 [project.optional-dependencies]
 anthropic = [

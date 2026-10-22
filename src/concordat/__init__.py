@@ -1,5 +1,7 @@
 """Typed sessions for AI agents."""
 
+from importlib.metadata import version as _version
+
 from .agent import Action, Agent, Approver, cli_approver, human, tool
 from .budget import Budget, BudgetExceeded
 from .protocol import Protocol, ProtocolError
@@ -19,4 +21,4 @@ __all__ = [
     "human",
     "tool",
 ]
-__version__ = "0.0.1"
+__version__ = _version("concordat")  # set in pyproject.toml
