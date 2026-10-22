@@ -10,8 +10,14 @@ from typing import Any, Literal
 import pydantic
 import pydantic_core
 
-from .agent import Action
+from .agent import Action, Agent
 from .budget import Budget
+
+STEPWISE_NOTE = (
+    "This conversation follows a fixed process. Each turn you are offered only the "
+    "actions allowed at the current step, so tools you used earlier may no longer be "
+    "listed and new ones may appear. That is expected: earlier results remain valid."
+)
 
 Status = Literal["done", "waiting", "refused", "max_tokens", "out_of_budget", "max_turns"]
 
@@ -28,6 +34,18 @@ class RunResult:
     status: Status
     text: str
     messages: list[Any]
+
+
+def system_prompt(agent: Agent) -> str:
+    return f"{agent.instructions}\n\n{STEPWISE_NOTE}" if agent.instructions else STEPWISE_NOTE
+
+
+def with_next_step(agent: Agent, content: str) -> str:
+    """Append what the model may do next, so a changing tool list is never a surprise."""
+    if agent.done:
+        return f"{content}\n\n[The process is complete.]"
+    allowed = ", ".join(agent.allowed_tools())
+    return f"{content}\n\n[Now allowed: {allowed}.]"
 
 
 def exhausted(budget: Budget) -> bool:

@@ -6,7 +6,18 @@ from typing import Any
 
 import anthropic
 
-from ._runner import RunResult, Status, arguments, cap, charge, description, exhausted, invoke
+from ._runner import (
+    RunResult,
+    Status,
+    arguments,
+    cap,
+    charge,
+    description,
+    exhausted,
+    invoke,
+    system_prompt,
+    with_next_step,
+)
 from .agent import Action, Agent
 
 __all__ = ["DEFAULT_MODEL", "FALLBACK_BETA", "RunResult", "run"]
@@ -48,10 +59,9 @@ def run(
             "model": model,
             "max_tokens": cap(budget, max_tokens),
             "messages": messages,
+            "system": system_prompt(agent),
             **request,
         }
-        if agent.instructions:
-            params["system"] = agent.instructions
         if actions:
             params["tools"] = [_tool_param(action) for action in actions.values()]
             # One call per response, so each call sees the state the previous one left.
@@ -82,7 +92,10 @@ def run(
         if not calls:
             return RunResult("done" if agent.done else "waiting", text, messages)
 
-        results = [_result(c.id, *invoke(actions, c.name, c.input)) for c in calls]
+        results = []
+        for c in calls:
+            content, error = invoke(actions, c.name, c.input)
+            results.append(_result(c.id, with_next_step(agent, content), error))
         messages.append({"role": "user", "content": results})
     return RunResult("done" if agent.done else "max_turns", text, messages)
 

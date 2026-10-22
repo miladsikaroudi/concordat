@@ -6,7 +6,18 @@ from typing import Any
 
 import openai
 
-from ._runner import RunResult, Status, arguments, cap, charge, description, exhausted, invoke
+from ._runner import (
+    RunResult,
+    Status,
+    arguments,
+    cap,
+    charge,
+    description,
+    exhausted,
+    invoke,
+    system_prompt,
+    with_next_step,
+)
 from .agent import Action, Agent
 
 __all__ = ["RunResult", "run"]
@@ -43,10 +54,9 @@ def run(
             "model": model,
             "input": items,
             "max_output_tokens": cap(budget, max_output_tokens),
+            "instructions": system_prompt(agent),
             **request,
         }
-        if agent.instructions:
-            params["instructions"] = agent.instructions
         if actions:
             params["tools"] = [_tool_param(action) for action in actions.values()]
             # One call per response, so each call sees the state the previous one left.
@@ -72,7 +82,9 @@ def run(
         if not calls:
             return RunResult("done" if agent.done else "waiting", text, items)
 
-        items.extend(_output(c.call_id, *invoke(actions, c.name, c.arguments)) for c in calls)
+        for c in calls:
+            content, error = invoke(actions, c.name, c.arguments)
+            items.append(_output(c.call_id, with_next_step(agent, content), error))
     return RunResult("done" if agent.done else "max_turns", text, items)
 
 

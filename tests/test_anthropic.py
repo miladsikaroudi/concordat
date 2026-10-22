@@ -87,18 +87,16 @@ def test_full_run_offers_only_legal_actions_each_turn() -> None:
     assert agent.state == "refunded"
     assert result.text == "Proposing."
     assert client.offered() == [["verify_identity"], ["propose_refund"], ["approve_refund"]]
-    assert last_results(result.messages) == [
-        {
-            "type": "tool_result",
-            "tool_use_id": "id_approve_refund",
-            "content": "approved",
-            "is_error": False,
-        }
-    ]
+    [approval] = last_results(result.messages)
+    assert approval["content"] == "approved\n\n[The process is complete.]"
+    assert not approval["is_error"]
+    verified = client.requests[1]["messages"][-1]["content"][0]["content"]
+    assert verified == "true\n\n[Now allowed: propose_refund.]"
     assert agent.budget.tool_calls == 3  # two tool calls; asking a human is free
 
     first = client.requests[0]
-    assert first["system"] == "You process refunds."
+    assert first["system"].startswith("You process refunds.\n\n")
+    assert "only the actions allowed at the current step" in first["system"]
     assert first["model"] == "claude-opus-5-5"
     assert first["tool_choice"] == {"type": "auto", "disable_parallel_tool_use": True}
     assert (first["betas"], first["fallbacks"]) == ([FALLBACK_BETA], "default")
@@ -127,7 +125,7 @@ def test_human_rejection_ends_in_denied() -> None:
     agent = RefundAgent(approver=lambda s, r: False)
     result = run(agent, client, "hi")
     assert (result.status, agent.state) == ("done", "denied")
-    assert last_results(result.messages)[0]["content"] == "rejected"
+    assert last_results(result.messages)[0]["content"].startswith("rejected\n\n")
 
 
 def test_model_asking_the_user_returns_waiting() -> None:

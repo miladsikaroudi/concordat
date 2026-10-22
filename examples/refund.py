@@ -13,15 +13,19 @@ class RefundAgent(Agent):
     final = {"refunded", "denied"}
     budget = Budget(tokens=60_000, tool_calls=6)
 
-    @tool(when="start", then={True: "verified", False: "denied"})
-    def verify_order(self, order_id: str) -> bool:
-        """Check that the order exists. Must happen before any refund."""
-        return order_id in ORDERS
+    @tool(when="start", then="verified")
+    def look_up_order(self, order_id: str) -> dict[str, str | float]:
+        """Find the order and its total. Must happen before any refund."""
+        if order_id not in ORDERS:
+            raise KeyError(f"no order {order_id!r}")  # an error leaves the state unchanged
+        return {"order_id": order_id, "total": ORDERS[order_id]}
 
     @tool(when="verified", then="awaiting_approval")
     def propose_refund(self, order_id: str, amount: float) -> str:
-        """Propose a refund amount for a verified order."""
-        return f"Proposed {amount} for {order_id} (order total {ORDERS[order_id]})."
+        """Propose a refund amount, at most the order total."""
+        if amount > ORDERS[order_id]:
+            raise ValueError(f"amount exceeds the order total {ORDERS[order_id]}")
+        return f"Proposed a refund of {amount} for {order_id}."
 
     @human(when="awaiting_approval", approve="refunded", reject="denied")
     def approve_refund(self, order_id: str, amount: float) -> str:

@@ -100,11 +100,16 @@ def test_full_run_offers_only_legal_actions_each_turn() -> None:
 
     assert (result.status, agent.state, result.text) == ("done", "refunded", "Proposing.")
     assert client.offered() == [["verify_identity"], ["propose_refund"], ["approve_refund"]]
-    assert outputs(result.messages) == ["true", '{"amount":42.0}', "approved"]
+    assert outputs(result.messages) == [
+        "true\n\n[Now allowed: propose_refund.]",
+        '{"amount":42.0}\n\n[Now allowed: approve_refund.]',
+        "approved\n\n[The process is complete.]",
+    ]
     assert agent.budget.tool_calls == 3
 
     first = client.requests[0]
-    assert (first["model"], first["instructions"]) == (MODEL, "You process refunds.")
+    assert first["model"] == MODEL
+    assert first["instructions"].startswith("You process refunds.\n\n")
     assert (first["tool_choice"], first["parallel_tool_calls"]) == ("auto", False)
     [verify] = first["tools"]
     assert (verify["type"], verify["name"]) == ("function", "verify_identity")
