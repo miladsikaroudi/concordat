@@ -1,6 +1,6 @@
 [project]
 name = "concordat"
-version = "0.0.1"
+version = "0.0.2"
 description = "Typed sessions for AI agents: protocols the runtime enforces on the model."
 readme = "README.md"
 license = "Apache-2.0"
