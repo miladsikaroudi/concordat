@@ -160,3 +160,94 @@ def test_abstract_base_and_inheritance() -> None:
     agent.answer("meaning of life?")
     agent.satisfied()
     assert agent.state == "start"  # rejected: back to answering
+
+
+# A subclass must be usable wherever its parent is (Liskov substitution).
+
+
+def test_subclass_may_add_steps_of_its_own() -> None:
+    class CarefulRefund(RefundAgent):
+        @tool(when="verified", then="checked")
+        def fraud_check(self) -> str:
+            return "clean"
+
+        @tool(when="checked", then="awaiting_approval")
+        def propose_refund(self, amount: float) -> Proposal:
+            return Proposal(amount)
+
+    agent = CarefulRefund()
+    agent.verify_identity("u1")
+    agent.fraud_check()
+    agent.approve_refund(agent.propose_refund(5.0))
+    assert agent.state == "refunded"
+
+
+def test_shortcut_past_the_approval_is_rejected() -> None:
+    with pytest.raises(ProtocolError) as e:
+
+        class FastRefund(RefundAgent):
+            @tool(when="start", then="refunded")
+            def instant_refund(self) -> str:
+                return "done"
+
+    assert str(e.value) == (
+        "FastRefund breaks RefundAgent's protocol: after instant_refund, it reaches "
+        "'refunded', which RefundAgent only reaches through "
+        "verify_identity → propose_refund → approve_refund"
+    )
+
+
+def test_skipping_verification_is_rejected() -> None:
+    with pytest.raises(ProtocolError, match="reaches 'verified'.*through verify_identity"):
+
+        class Trusting(RefundAgent):
+            @tool(when="start", then="verified")
+            def assume_verified(self) -> str:
+                return "ok"
+
+
+def test_moving_a_parent_step_earlier_is_rejected() -> None:
+    with pytest.raises(ProtocolError, match="at the start, it allows 'propose_refund'"):
+
+        class Eager(RefundAgent):
+            @tool(when="start", then="awaiting_approval")
+            def propose_refund(self, amount: float) -> Proposal:
+                return Proposal(amount)
+
+            @tool(when="verified", then="denied")
+            def give_up(self) -> str:
+                return "no"
+
+
+def test_new_outcome_is_rejected() -> None:
+    with pytest.raises(ProtocolError, match="'escalated', which is not one of RefundAgent's"):
+
+        class Escalating(RefundAgent):
+            final = {"refunded", "denied", "escalated"}
+
+            @tool(when="verified", then="escalated")
+            def escalate(self) -> str:
+                return "sent to a manager"
+
+
+def test_human_step_cannot_become_a_tool() -> None:
+    with pytest.raises(ProtocolError, match="'approve_refund' is no longer decided by a human"):
+
+        class SelfApproving(RefundAgent):
+            @tool(when="awaiting_approval", then={True: "refunded", False: "denied"})
+            def approve_refund(self, proposal: Proposal) -> bool:
+                return True
+
+
+def test_grandchildren_are_checked_against_every_ancestor() -> None:
+    class Polite(RefundAgent):
+        @tool(when="start", then="start")
+        def greet(self) -> str:
+            return "hello"
+
+    with pytest.raises(ProtocolError, match="Sneaky breaks Polite's protocol"):
+
+        class Sneaky(Polite):
+            @tool(when="verified", then="refunded")
+            def skip_approval(self) -> str:
+                return "done"

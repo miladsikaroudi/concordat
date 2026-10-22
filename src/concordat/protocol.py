@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Iterable, Mapping
+
+
+def _where(path: list[str]) -> str:
+    return f"after {' → '.join(path)}," if path else "at the start,"
 
 
 class ProtocolError(ValueError):
@@ -40,6 +45,67 @@ class Protocol:
 
     def targets(self, state: str, action: str) -> frozenset[str]:
         return self.transitions.get(state, {}).get(action, frozenset())
+
+    def route(self, starts: Iterable[str], goal: str) -> list[str] | None:
+        """The shortest sequence of actions from any of ``starts`` to ``goal``."""
+        paths: dict[str, list[str]] = {state: [] for state in sorted(starts)}
+        queue = deque(paths)
+        while queue:
+            state = queue.popleft()
+            if state == goal:
+                return paths[state]
+            for action, targets in sorted(self.transitions.get(state, {}).items()):
+                for target in sorted(targets - paths.keys()):
+                    paths[target] = [*paths[state], action]
+                    queue.append(target)
+        return None
+
+    def refinement_problem(self, parent: Protocol, name: str = "the parent") -> str | None:
+        """Why this protocol can't safely stand in for ``parent``, or None if it can.
+
+        It can if it never takes the parent's actions out of order, never reaches one of
+        the parent's states by a route the parent doesn't allow, and only ends where the
+        parent can end. Extra actions and states of its own are fine.
+        """
+        if extra := sorted(self.final - parent.final):
+            return f"it can end in {extra[0]!r}, which is not one of {name}'s outcomes"
+        parent_actions = {a for actions in parent.transitions.values() for a in actions}
+
+        # Walk this protocol while tracking which parent states each run corresponds to.
+        def enter(
+            state: str, possible: frozenset[str], path: list[str]
+        ) -> tuple[frozenset[str], str | None]:
+            if state not in parent.states:
+                return possible, None  # a state of its own, between the parent's states
+            if state in possible:
+                return frozenset({state}), None
+            route = parent.route(possible, state)
+            how = f"only reaches through {' → '.join(route)}" if route else "can't reach there"
+            return possible, f"{_where(path)} it reaches {state!r}, which {name} {how}"
+
+        start, problem = enter(self.initial, frozenset({parent.initial}), [])
+        if problem:
+            return problem
+        queue = deque([(self.initial, start, list[str]())])
+        seen = {(self.initial, start)}
+        while queue:
+            state, possible, path = queue.popleft()
+            for action, targets in sorted(self.transitions.get(state, {}).items()):
+                after = possible
+                if action in parent_actions:
+                    after = frozenset(t for p in possible for t in parent.targets(p, action))
+                    if not after:
+                        return (
+                            f"{_where(path)} it allows {action!r}, which {name} doesn't allow there"
+                        )
+                for target in sorted(targets):
+                    narrowed, problem = enter(target, after, [*path, action])
+                    if problem:
+                        return problem
+                    if (target, narrowed) not in seen:
+                        seen.add((target, narrowed))
+                        queue.append((target, narrowed, [*path, action]))
+        return None
 
     def _check(self) -> None:
         problems = []

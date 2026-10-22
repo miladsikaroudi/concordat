@@ -170,6 +170,21 @@ class Agent:
             cls.protocol = Protocol(cls.initial, transitions, cls.final)
         except ProtocolError as e:
             raise ProtocolError(f"{cls.__name__}: {e}") from None
+        cls._check_substitutable()
+
+    @classmethod
+    def _check_substitutable(cls) -> None:
+        """A subclass must be safe to use wherever a concrete ancestor is (Liskov)."""
+        for base in cls.__mro__[1:]:
+            parent: Protocol | None = vars(base).get("protocol")
+            if parent is None:
+                continue  # an abstract base: no protocol to keep
+            problem = cls.protocol.refinement_problem(parent, base.__name__)
+            for name, step in vars(base)["_steps"].items():
+                if isinstance(step, _Human) and not isinstance(cls._steps.get(name), _Human):
+                    problem = problem or f"{name!r} is no longer decided by a human"
+            if problem:
+                raise ProtocolError(f"{cls.__name__} breaks {base.__name__}'s protocol: {problem}")
 
     def __init__(self, approver: Approver = cli_approver) -> None:
         if not self.final:

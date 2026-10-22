@@ -80,6 +80,13 @@ class RefundAgent(Agent):
   protocol is a `ProtocolError` at import time.
 - Declaring `final` makes a class concrete. Classes without it are abstract bases,
   so protocols can be specialised by inheritance.
+- **Protocol-safe inheritance (Liskov).** A subclass of a concrete agent must be
+  usable wherever its parent is, and this is checked when the class is defined. It
+  may add steps and states of its own, but it may not take the parent's steps out of
+  order, reach one of the parent's states by a shortcut, end in an outcome the parent
+  doesn't have, or turn a human decision into a tool. This is a simple form of
+  session subtyping (Gay & Hole, 2005): each run of the subclass, with its own extra
+  steps hidden, must be a run the parent allows.
 - Calling a tool outside its state raises `ProtocolViolation` *before* the body
   runs. Each call charges one tool call to the instance's own copy of the budget.
 - `then` is a single next state, or a mapping from the method's return value to the

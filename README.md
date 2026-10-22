@@ -41,6 +41,24 @@ agent.allowed_tools()          # {'verify_identity': ...}: all the model gets to
 agent.propose_refund(5000)     # ProtocolViolation, raised before the body runs
 ```
 
+### Safe inheritance
+
+Specialise an agent by subclassing it. Adding steps is fine; bypassing the parent's
+is rejected when the class is defined:
+
+```python
+class FastRefundAgent(RefundAgent):
+    @tool(when="start", then="refunded")
+    def instant_refund(self, order_id: str) -> str: ...
+
+# ProtocolError: FastRefundAgent breaks RefundAgent's protocol: after instant_refund,
+# it reaches 'refunded', which RefundAgent only reaches through
+# verify_identity → propose_refund → approve_refund
+```
+
+So a team can define a compliant base agent once, and every specialised version
+keeps its safety steps.
+
 ### Running it with Claude
 
 ```bash
