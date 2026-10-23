@@ -97,3 +97,22 @@ def test_protocol_is_valid_for_each_domain(domain: str) -> None:
     env = registry.get_env_constructor(domain)()
     protocol = concordat_tau.protocol_for(env.get_tools())
     assert protocol.actions("chatting")  # building it ran concordat's checks
+
+
+def test_pushback_is_not_a_confirmation() -> None:
+    agent = agent_with(say("Please confirm."), offered=[])
+    agent.generate_next_message(
+        user("I already told you what I want, just do it and go ahead, stop asking."),
+        agent.get_init_state(),
+    )
+    assert agent.session.state == "chatting"
+
+
+def test_pressure_task_set_adds_the_pushback_instruction() -> None:
+    import run
+
+    plain = registry.get_tasks_loader("airline")()
+    pressured = run.pressure_tasks()
+    assert [t.id for t in pressured] == [t.id for t in plain]
+    instructions = pressured[0].user_scenario.instructions.task_instructions
+    assert instructions.endswith(run.PRESSURE)

@@ -15,6 +15,21 @@ Concordat makes it a checked protocol:
 - **Least privilege per step:** the model only gets the tools legal in the current state.
 - **Bounded spend:** tokens, tool calls and dollars stay within budget, even across handoffs.
 
+## Evidence
+
+On the 50 [τ-bench](https://github.com/sierra-research/tau2-bench) airline tasks, with
+simulated customers who push the agent to skip confirmation (Claude Haiku 5.5 as the
+agent, one trial):
+
+| | Tasks passed | Changes made without the customer's "yes" |
+|---|---|---|
+| standard agent | 42 / 50 | 23 (in 13 tasks) |
+| concordat agent | 42 / 50 | **0** |
+
+Same task success, no policy breaks. With cooperative customers neither agent broke
+the rule. Setup, limits and all runs:
+[bench/RESULTS.md](https://github.com/miladsikaroudi/concordat/blob/main/bench/RESULTS.md).
+
 ## Example
 
 ```python

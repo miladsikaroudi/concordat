@@ -23,7 +23,7 @@ from tau2.utils.llm_utils import generate
 from concordat import Protocol, Session
 
 TRANSFER = "transfer_to_human_agents"
-YES = re.compile(r"\b(yes|yep|yeah|confirm(ed)?|go ahead|proceed)\b", re.IGNORECASE)
+YES = re.compile(r"\b(yes|yep|yeah)\b", re.IGNORECASE)  # the policies ask for an explicit "yes"
 
 PROTOCOL_NOTE = """
 <process>
