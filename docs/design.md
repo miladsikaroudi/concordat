@@ -96,6 +96,9 @@ class RefundAgent(Agent):
   `approver`, which receives the method's return value. Offering the request keeps
   the model from stalling in a state where only a human can move the protocol on.
 - `instructions` is the agent's system prompt.
+- `Agent.diagram()` (and `Protocol.to_mermaid()`) draw the protocol as a Mermaid state
+  diagram, with human decisions labelled, so a reviewer can check the process as a
+  picture rather than code.
 - Decorated methods keep their signatures for type checkers.
 
 ## Scope

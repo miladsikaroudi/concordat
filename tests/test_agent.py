@@ -251,3 +251,21 @@ def test_grandchildren_are_checked_against_every_ancestor() -> None:
             @tool(when="verified", then="refunded")
             def skip_approval(self) -> str:
                 return "done"
+
+
+def test_diagram() -> None:
+    diagram = RefundAgent.diagram()
+    assert diagram.startswith("stateDiagram-v2\n")
+    ids = dict(
+        line.strip().removeprefix("state ").split(" as ")
+        for line in diagram.splitlines()
+        if line.strip().startswith("state ")
+    )
+    s = {name.strip('"'): id_ for name, id_ in ids.items()}
+    assert f"[*] --> {s['start']}" in diagram
+    assert f"{s['start']} --> {s['verified']}: verify_identity" in diagram
+    assert (
+        f"{s['awaiting_approval']} --> {s['refunded']}: approve_refund (human approved)" in diagram
+    )
+    assert f"{s['awaiting_approval']} --> {s['denied']}: approve_refund (human rejected)" in diagram
+    assert f"{s['refunded']} --> [*]" in diagram and f"{s['denied']} --> [*]" in diagram

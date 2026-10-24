@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 
 
 def _where(path: list[str]) -> str:
@@ -45,6 +45,23 @@ class Protocol:
 
     def targets(self, state: str, action: str) -> frozenset[str]:
         return self.transitions.get(state, {}).get(action, frozenset())
+
+    def to_mermaid(self, label: Callable[[str, str, str], str] | None = None) -> str:
+        """A Mermaid state diagram of the protocol; GitHub renders it in Markdown.
+
+        ``label(state, action, target)`` names each arrow; the action by default.
+        """
+        ids = {state: f"s{i}" for i, state in enumerate(sorted(self.states))}
+        lines = ["stateDiagram-v2"]
+        lines += [f'    state "{state}" as {ids[state]}' for state in sorted(self.states)]
+        lines.append(f"    [*] --> {ids[self.initial]}")
+        for state, actions in sorted(self.transitions.items()):
+            for action, targets in sorted(actions.items()):
+                for target in sorted(targets):
+                    text = label(state, action, target) if label else action
+                    lines.append(f"    {ids[state]} --> {ids[target]}: {text}")
+        lines += [f"    {ids[state]} --> [*]" for state in sorted(self.final)]
+        return "\n".join(lines)
 
     def route(self, starts: Iterable[str], goal: str) -> list[str] | None:
         """The shortest sequence of actions from any of ``starts`` to ``goal``."""

@@ -201,6 +201,21 @@ class Agent:
     def done(self) -> bool:
         return self.session.done
 
+    @classmethod
+    def diagram(cls) -> str:
+        """The agent's protocol as a Mermaid state diagram, human decisions labelled."""
+        if not cls.final:
+            raise TypeError(f"{cls.__name__} is abstract: declare its final states")
+
+        def label(state: str, action: str, target: str) -> str:
+            step = cls._steps[action]
+            if isinstance(step, _Human):
+                outcome = "approved" if target == step.approve else "rejected"
+                return f"{action} (human {outcome})"
+            return action
+
+        return cls.protocol.to_mermaid(label)
+
     def allowed_tools(self) -> dict[str, Action]:
         """What the model may do right now; everything else is withheld from it."""
         actions = {}
