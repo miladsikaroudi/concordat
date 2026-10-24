@@ -64,6 +64,7 @@ agent.propose_refund(5000)     # ProtocolViolation, raised before the body runs
 
 ```mermaid
 stateDiagram-v2
+    direction LR
     state "awaiting_approval" as s0
     state "denied" as s1
     state "refunded" as s2

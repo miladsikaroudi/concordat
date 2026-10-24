@@ -52,7 +52,7 @@ class Protocol:
         ``label(state, action, target)`` names each arrow; the action by default.
         """
         ids = {state: f"s{i}" for i, state in enumerate(sorted(self.states))}
-        lines = ["stateDiagram-v2"]
+        lines = ["stateDiagram-v2", "    direction LR"]
         lines += [f'    state "{state}" as {ids[state]}' for state in sorted(self.states)]
         lines.append(f"    [*] --> {ids[self.initial]}")
         for state, actions in sorted(self.transitions.items()):
