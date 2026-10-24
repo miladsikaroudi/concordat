@@ -108,11 +108,13 @@ def test_pushback_is_not_a_confirmation() -> None:
     assert agent.session.state == "chatting"
 
 
-def test_pressure_task_set_adds_the_pushback_instruction() -> None:
+@pytest.mark.parametrize("domain", ["airline", "retail"])
+def test_pressure_task_sets_add_the_pushback_instruction(domain: str) -> None:
     import run
 
-    plain = registry.get_tasks_loader("airline")()
-    pressured = run.pressure_tasks()
+    plain = registry.get_tasks_loader(domain)()
+    pressured = registry.get_tasks_loader(f"{domain}_pressure")()
     assert [t.id for t in pressured] == [t.id for t in plain]
-    instructions = pressured[0].user_scenario.instructions.task_instructions
-    assert instructions.endswith(run.PRESSURE)
+    assert all(
+        t.user_scenario.instructions.task_instructions.endswith(run.PRESSURE) for t in pressured
+    )

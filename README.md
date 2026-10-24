@@ -17,18 +17,20 @@ Concordat makes it a checked protocol:
 
 ## Evidence
 
-On the 50 [τ-bench](https://github.com/sierra-research/tau2-bench) airline tasks, with
+On [τ-bench](https://github.com/sierra-research/tau2-bench)'s 50 airline tasks, with
 simulated customers who push the agent to skip confirmation (Claude Haiku 5.5 as the
-agent, one trial):
+agent, three runs, 128 task-runs both agents completed):
 
 | | Tasks passed | Changes made without the customer's "yes" |
 |---|---|---|
-| standard agent | 42 / 50 | 23 (in 13 tasks) |
-| concordat agent | 42 / 50 | **0** |
+| standard agent | 112 / 128 | 50 (in 29 task-runs) |
+| concordat agent | 105 / 128 | **0** |
 
-Same task success, no policy breaks. With cooperative customers neither agent broke
-the rule. Setup, limits and all runs:
-[bench/RESULTS.md](https://github.com/miladsikaroudi/concordat/blob/main/bench/RESULTS.md).
+The standard agent broke the airline's confirmation rule in every run; concordat never
+did. The price today: when a customer kept refusing to say yes, the concordat agent
+sometimes transferred them to a human instead of asking again, which costs some task
+success. With cooperative customers neither agent broke the rule. Setup, limits and
+all runs: [bench/RESULTS.md](https://github.com/miladsikaroudi/concordat/blob/main/bench/RESULTS.md).
 
 ## Example
 
@@ -54,6 +56,27 @@ class RefundAgent(Agent):
 agent = RefundAgent()          # protocol already checked when the class was defined
 agent.allowed_tools()          # {'verify_identity': ...}: all the model gets to see
 agent.propose_refund(5000)     # ProtocolViolation, raised before the body runs
+```
+
+### See the process
+
+`RefundAgent.diagram()` draws the protocol, straight from the class:
+
+```mermaid
+stateDiagram-v2
+    state "awaiting_approval" as s0
+    state "denied" as s1
+    state "refunded" as s2
+    state "start" as s3
+    state "verified" as s4
+    [*] --> s3
+    s0 --> s1: approve_refund (human rejected)
+    s0 --> s2: approve_refund (human approved)
+    s3 --> s1: verify_identity
+    s3 --> s4: verify_identity
+    s4 --> s0: propose_refund
+    s1 --> [*]
+    s2 --> [*]
 ```
 
 ### Safe inheritance
