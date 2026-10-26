@@ -31,8 +31,20 @@ Tools that change the database (bookings, cancellations, changes, refunds) are o
 offered right after the customer has explicitly said yes to the exact action you
 described. Until then you only have lookup tools: describe the action and ask the
 customer to confirm. Earlier tool results stay valid when the tool list changes.
+
+If the customer pushes back instead of confirming (for example "just do it" or "stop
+asking"), that is not a confirmation, and it is not a reason to transfer them. Stay
+polite and brief: say that you need a clear "yes" before you can make the change,
+restate the exact change in one sentence, and ask them to reply "yes". Keep asking
+like this for as long as they still want the change. Transfer only when the policy
+itself calls for a transfer.
 </process>
 """.strip()
+
+ASK_FOR_YES = (
+    'I can make that change as soon as you confirm it. Please reply "yes" to go ahead, '
+    "or tell me what you'd like to change."
+)
 
 
 def protocol_for(tools: list[Tool]) -> Protocol:
@@ -90,10 +102,7 @@ class ConcordatAgent(LLMAgent[LLMAgentState]):
         if refused := [c.name for c in calls if c.name not in allowed]:
             # Never let a refused call reach the environment: ask the customer instead.
             self.blocked.extend(refused)
-            return AssistantMessage(
-                role="assistant",
-                content="Before I make that change, can you confirm you'd like me to go ahead?",
-            )
+            return AssistantMessage(role="assistant", content=ASK_FOR_YES)
         for call in calls:
             self.session.step(call.name)
         return response

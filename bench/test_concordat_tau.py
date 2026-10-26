@@ -67,7 +67,7 @@ def test_a_write_the_model_attempts_without_a_yes_never_reaches_the_environment(
     agent = agent_with(call("cancel_reservation", reservation_id="R1"), offered=[])
     response, _ = agent.generate_next_message(user("Cancel R1"), agent.get_init_state())
     assert response.tool_calls is None
-    assert "confirm" in (response.content or "")
+    assert response.content == concordat_tau.ASK_FOR_YES
     assert agent.blocked == ["cancel_reservation"]
 
 
@@ -118,3 +118,9 @@ def test_pressure_task_sets_add_the_pushback_instruction(domain: str) -> None:
     assert all(
         t.user_scenario.instructions.task_instructions.endswith(run.PRESSURE) for t in pressured
     )
+
+
+def test_prompt_says_pushback_is_no_reason_to_transfer() -> None:
+    agent = agent_with(offered=[])
+    prompt = agent.system_prompt
+    assert "not a reason to transfer" in prompt and 'reply "yes"' in prompt
