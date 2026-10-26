@@ -9,6 +9,7 @@ asked to confirm a change.
 
 from collections.abc import Callable
 
+import portkey_route
 from concordat_tau import create_concordat_agent
 from tau2.cli import main
 from tau2.data_model.tasks import Task
@@ -39,6 +40,7 @@ def pressure(get_tasks: Callable[[str | None], list[Task]]) -> Callable[..., lis
     return pressure_tasks
 
 
+portkey_route.install()
 registry.register_agent_factory(create_concordat_agent, "concordat_agent")
 for name, domain in (("airline", airline), ("retail", retail)):
     registry.register_tasks(

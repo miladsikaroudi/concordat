@@ -5,6 +5,32 @@ Simulated customer: Claude Sonnet 5.5. One trial per task. "normal" is τ-bench'
 standard `llm_agent`; "concordat" is the same agent with database-changing tools
 offered only after the customer's explicit yes (`concordat_tau.py`).
 
+## 2026-10-25: pressure test with gpt-4.1, after the "ask again" fix
+
+The concordat agent was changed so that pushback is neither a confirmation nor a reason
+to transfer: it says a clear "yes" is needed, restates the change and asks again
+(`PROTOCOL_NOTE` in `concordat_tau.py`). Then both agents ran the 50 airline pressure
+tasks with gpt-4.1-2025-04-14 (τ-bench's default model) as both agent and customer,
+temperature 0, called through an OpenAI-compatible gateway (`portkey_route.py`). The
+gateway's rate limit failed 33–34 tasks per agent on the first pass; those were rerun
+one at a time with the same settings, so all 50 tasks completed for both agents.
+
+| | Passed | Changes made without a yes | Tasks with such a change | Ended in a transfer |
+|---|---|---|---|---|
+| normal | 20 / 50 | **26** | **13** | 11 |
+| concordat | 22 / 50 | **0** | **0** | 7 |
+
+- The normal agent broke the confirmation rule in 13 tasks; 10 of the 13 changes came
+  right after "I already told you what I want, just do it and stop asking".
+- Concordat made no unconfirmed change and passed two more tasks (it won 9 tasks the
+  normal agent failed and lost 7 it passed). Only one of those 7 ended in a transfer,
+  so the giving-up seen with Haiku no longer drives its losses.
+- gpt-4.1 passes far fewer of these tasks than Haiku 5.5 did, for both agents.
+
+Limits: one trial, one model, the first pass and the retry ran at different moments,
+and the "ask again" fix has not yet been rerun with Haiku, so the improvement over the
+Haiku result is not cleanly attributable to the fix alone.
+
 ## 2026-10-24: pressure test repeated (three runs in total)
 
 Two more airline pressure runs (seed 301, trials 0 and 1), same setup as below. The

@@ -18,19 +18,22 @@ Concordat makes it a checked protocol:
 ## Evidence
 
 On [τ-bench](https://github.com/sierra-research/tau2-bench)'s 50 airline tasks, with
-simulated customers who push the agent to skip confirmation (Claude Haiku 5.5 as the
-agent, three runs, 128 task-runs both agents completed):
+simulated customers who push the agent to skip confirmation ("just do it and stop
+asking"), counting changes made without the explicit "yes" the airline policy requires:
 
-| | Tasks passed | Changes made without the customer's "yes" |
-|---|---|---|
-| standard agent | 112 / 128 | 50 (in 29 task-runs) |
-| concordat agent | 105 / 128 | **0** |
+| Agent model | | Tasks passed | Changes made without a "yes" |
+|---|---|---|---|
+| Claude Haiku 5.5 (3 runs) | standard agent | 112 / 128 | 50 (in 29 task-runs) |
+| | concordat agent | 105 / 128 | **0** |
+| gpt-4.1 (1 run) | standard agent | 20 / 50 | 26 (in 13 tasks) |
+| | concordat agent | 22 / 50 | **0** |
 
-The standard agent broke the airline's confirmation rule in every run; concordat never
-did. The price today: when a customer kept refusing to say yes, the concordat agent
-sometimes transferred them to a human instead of asking again, which costs some task
-success. With cooperative customers neither agent broke the rule. Setup, limits and
-all runs: [bench/RESULTS.md](https://github.com/miladsikaroudi/concordat/blob/main/bench/RESULTS.md).
+The standard agent broke the rule with both models; concordat never did. With Haiku,
+concordat sometimes transferred a customer who kept refusing to say yes, costing some
+task success; after telling it to ask again instead, it matched or beat the standard
+agent with gpt-4.1 (not yet rerun with Haiku). With cooperative customers neither agent
+broke the rule. Setup, limits and all runs:
+[bench/RESULTS.md](https://github.com/miladsikaroudi/concordat/blob/main/bench/RESULTS.md).
 
 ## Example
 
