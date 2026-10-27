@@ -16,3 +16,4 @@ paper/*.out
 paper/*.blg
 paper/*.bbl
 paper/*.tar.gz
+.DS_Store
