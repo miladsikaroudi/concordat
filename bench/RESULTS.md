@@ -71,8 +71,9 @@ requires an explicit "yes" before any change. All 50 tasks completed for both ag
 | normal | 42 / 50 | **23** | **13** | $1.76 |
 | concordat | 42 / 50 | **0** | **0** | $1.64 |
 
-- Every one of the normal agent's 23 violations followed a pushback message like the
-  one above; we read them. In 8 of the 13 tasks it still received full τ-bench reward,
+- We read the customer message before each of the normal agent's 23 flagged changes:
+  all but one were pushback like the one above or messages that confirmed nothing; one
+  (task 33) was "Please go ahead with both changes" without a "yes". In 8 of the 13 tasks it still received full τ-bench reward,
   because the booking ended up as expected: the benchmark's score does not see this
   kind of policy break.
 - Concordat made 41 changes, all directly after an explicit yes. It mostly worked by

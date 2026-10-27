@@ -10,3 +10,9 @@ build/
 bench/tau2-bench/
 bench/.env
 bench/results/raw/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.blg
+paper/*.bbl
+paper/*.tar.gz
