@@ -260,10 +260,15 @@ A \texttt{@human} step can be requested by the model but only decided by the age
 approver, a function supplied by the application that receives the method's return
 value and returns approve or reject. The two outcomes are distinct protocol transitions.
 
-A \texttt{Budget} tracks tokens, tool calls and money. Every model response's tokens
-are charged, and the next response's output limit is capped at what remains. Handing work
-to another agent \emph{splits} the budget: the child receives an allowance that is
-removed from the parent, so the same allowance cannot be spent twice. A child may not be
+A \texttt{Budget} tracks tokens, tool calls and US dollars. The runners charge every
+model response's tokens and every tool call, and cap the next response's output limit at
+the tokens that remain. They do not know model prices, so dollar amounts are charged by
+the application; a run stops once any limited amount reaches zero. All amounts must be
+finite and non-negative. Handing work to another agent \emph{splits} the budget: the
+child receives an allowance that is removed from the parent, so the same allowance
+cannot be spent twice. (Version 0.0.3 accepted negative amounts, which let a split
+increase the parent's allowance, and its runners ignored an exhausted dollar budget;
+both were fixed in 0.0.4.) A child may not be
 unlimited in a dimension where its parent is limited. This is the operational core of
 treating budgets as linear resources \citep{das2018resource}; Concordat does not yet
 type budgets statically.
@@ -317,7 +322,7 @@ derived from method signatures and validated before invocation. A run ends with 
 of \texttt{done}, \texttt{waiting} (the model ended its turn to ask the user something),
 \texttt{refused}, \texttt{max\_tokens}, \texttt{out\_of\_budget} or \texttt{max\_turns};
 any pending tool call receives a result so the conversation can be resumed. The library
-has 50 unit tests and is checked with mypy in strict mode. It is published on PyPI as
+has 59 unit tests and is checked with mypy in strict mode. It is published on PyPI as
 \texttt{concordat}, with source, benchmark harness and results at
 \url{https://github.com/miladsikaroudi/concordat}.
 
@@ -490,7 +495,9 @@ task-runs, mostly without the benchmark noticing; the Concordat agent never did,
 comparable task success.
 
 \section*{Acknowledgements}
-AI coding and writing assistants were used; the author reviewed all content.
+The author thanks Halil Talha Ertan for reporting two budget-accounting bugs in
+version 0.0.3. AI coding and writing assistants were used; the author reviewed all
+content.
 
 \bibliographystyle{plainnat}
 \bibliography{references}

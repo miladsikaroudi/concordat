@@ -12,8 +12,9 @@ give:
 
 1. **Protocol fidelity** — the conversation follows a declared order of turns.
 2. **Least privilege per step** — the model only sees the tools that are legal *now*.
-3. **Bounded spend** — tokens, tool calls and money stay within a declared budget,
-   including across handoffs to other agents.
+3. **Bounded spend** — tokens and tool calls stay within a declared budget, including
+   across handoffs to other agents; a dollar budget is enforced the same way once the
+   caller charges it.
 
 ## Idea
 
@@ -41,8 +42,11 @@ its interface. So the protocol is not documentation — it is enforced on every 
   Humans are just another party with actions in the protocol.
 - **Session** — a protocol instance. It tracks the current state, exposes
   `allowed_actions()`, and rejects anything else with `ProtocolViolation`.
-- **Budget** — tokens, tool calls and USD. Spending is checked; `split()` carves
-  out a child budget and removes it from the parent (linear: it can't be spent twice).
+- **Budget** — tokens, tool calls and USD. Amounts must be finite and non-negative;
+  spending is checked; `split()` carves out a child budget and removes it from the
+  parent (linear: it can't be spent twice). Runners charge tokens and tool calls; USD
+  is charged by the caller, since runners don't know model prices. A run stops when
+  any limited amount reaches zero.
 - **Handoff** — starting a child session on another agent with a split budget; the
   parent stays in a waiting state until the child finishes.
 

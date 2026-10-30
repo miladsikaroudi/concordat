@@ -204,3 +204,13 @@ def test_max_turns() -> None:
         max_turns=3,
     )
     assert result.status == "max_turns"
+
+
+def test_zero_usd_budget_stops_before_any_request() -> None:
+    class Spent(RefundAgent):
+        budget = Budget(usd=0.0)
+
+    client = FakeClient()
+    result = run(Spent(approver=lambda s, r: True), client, "hi")
+    assert result.status == "out_of_budget"
+    assert client.requests == []

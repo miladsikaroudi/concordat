@@ -13,7 +13,9 @@ Concordat makes it a checked protocol:
 
 - **Protocol fidelity:** the session follows the declared order of turns.
 - **Least privilege per step:** the model only gets the tools legal in the current state.
-- **Bounded spend:** tokens, tool calls and dollars stay within budget, even across handoffs.
+- **Bounded spend:** tokens and tool calls are charged automatically and stay within
+  budget, even across handoffs. A dollar budget is charged by your code (`budget.spend(usd=...)`),
+  since the runners don't know model prices; a run stops when any limited amount reaches zero.
 
 ## Evidence
 

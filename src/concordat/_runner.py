@@ -49,9 +49,7 @@ def with_next_step(agent: Agent, content: str) -> str:
 
 
 def exhausted(budget: Budget) -> bool:
-    return (budget.tokens is not None and budget.tokens <= 0) or (
-        budget.tool_calls is not None and budget.tool_calls <= 0
-    )
+    return budget.exhausted()
 
 
 def cap(budget: Budget, max_tokens: int) -> int:
