@@ -31,17 +31,20 @@ def run(
     model: str,
     max_output_tokens: int = 16000,
     max_turns: int = 20,
+    max_rejections: int = 3,
     **request: Any,
 ) -> RunResult:
     """Drive ``agent`` with an OpenAI model until its protocol finishes or a limit is hit.
 
     Each turn, the model is offered only the actions legal in the agent's current state,
     and every response's tokens are charged to ``agent.budget``. ``messages`` in the
-    result are Responses API input items. Extra keyword arguments are passed to
+    result are Responses API input items. After ``max_rejections`` rejected calls in a
+    row the run ends as ``stuck``. Extra keyword arguments are passed to
     ``responses.create``.
     """
     items = [{"role": "user", "content": prompt}] if isinstance(prompt, str) else list(prompt)
     text = ""
+    rejections = 0  # consecutive calls that were rejected
     for _ in range(max_turns):
         if agent.done:
             return RunResult("done", text, items)
@@ -84,7 +87,10 @@ def run(
 
         for c in calls:
             content, error = invoke(actions, c.name, c.arguments)
+            rejections = rejections + 1 if error else 0
             items.append(_output(c.call_id, with_next_step(agent, content), error))
+        if rejections >= max_rejections:
+            return RunResult("stuck", text, items)
     return RunResult("done" if agent.done else "max_turns", text, items)
 
 

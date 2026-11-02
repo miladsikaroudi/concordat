@@ -159,3 +159,11 @@ def test_refusals() -> None:
         result = run(RefundAgent(approver=lambda s, r: True), fake(response), "hi", model=MODEL)
         assert result.status == "refused"
         assert len(result.messages) == 1
+
+
+def test_repeated_rejections_end_the_run_as_stuck() -> None:
+    client = fake(*[reply(call("propose_refund", amount=1)) for _ in range(5)])
+    result = run(RefundAgent(approver=lambda s, r: True), client, "hi", model=MODEL)
+    assert result.status == "stuck"
+    assert len(client.requests) == 3
+    assert outputs(result.messages)[-1].startswith("Error:")

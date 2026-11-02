@@ -114,6 +114,8 @@ class RefundAgent(Agent):
 - Anthropic runner (`concordat.anthropic.run`): allowed tools per state, one call
   per response, token charging with per-response caps, refusal fallbacks — *done*
 - OpenAI runner (`concordat.openai.run`, Responses API) — *done*
+- Loop guard: a run ends as `stuck` after `max_rejections` (default 3) rejected calls
+  in a row; any accepted call resets the count — *done*
 - Output schema per state (structured outputs), beyond tool arguments
 - Human approval connector (CLI first)
 - Showcase: a τ³-bench airline or retail domain, typed vs. untyped agent

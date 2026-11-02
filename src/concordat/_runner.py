@@ -19,7 +19,7 @@ STEPWISE_NOTE = (
     "listed and new ones may appear. That is expected: earlier results remain valid."
 )
 
-Status = Literal["done", "waiting", "refused", "max_tokens", "out_of_budget", "max_turns"]
+Status = Literal["done", "waiting", "refused", "max_tokens", "out_of_budget", "max_turns", "stuck"]
 
 
 @dataclass
@@ -28,7 +28,9 @@ class RunResult:
 
     ``done``: the protocol reached a final state. ``waiting``: the model ended its turn
     before that, usually to ask the user something; append a user message to
-    ``messages`` and call ``run`` again to continue.
+    ``messages`` and call ``run`` again to continue. ``stuck``: the model's last
+    ``max_rejections`` calls in a row were all rejected (not allowed now, invalid
+    arguments, or the tool failed), so the run stopped instead of looping.
     """
 
     status: Status

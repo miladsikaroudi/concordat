@@ -320,9 +320,11 @@ Messages API with \texttt{disable\_parallel\_tool\_use}; the OpenAI runner uses 
 Responses API with \texttt{parallel\_tool\_calls} disabled. Tool input schemas are
 derived from method signatures and validated before invocation. A run ends with a status
 of \texttt{done}, \texttt{waiting} (the model ended its turn to ask the user something),
-\texttt{refused}, \texttt{max\_tokens}, \texttt{out\_of\_budget} or \texttt{max\_turns};
+\texttt{refused}, \texttt{max\_tokens}, \texttt{out\_of\_budget}, \texttt{max\_turns}
+or \texttt{stuck} (after three consecutive rejected calls, so a model cannot loop on
+them);
 any pending tool call receives a result so the conversation can be resumed. The library
-has 59 unit tests and is checked with mypy in strict mode. It is published on PyPI as
+has 63 unit tests and is checked with mypy in strict mode. It is published on PyPI as
 \texttt{concordat}, with source, benchmark harness and results at
 \url{https://github.com/miladsikaroudi/concordat}.
 

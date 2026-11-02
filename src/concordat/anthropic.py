@@ -34,6 +34,7 @@ def run(
     model: str = DEFAULT_MODEL,
     max_tokens: int = 16000,
     max_turns: int = 20,
+    max_rejections: int = 3,
     fallbacks: bool = True,
     **request: Any,
 ) -> RunResult:
@@ -42,11 +43,13 @@ def run(
     Each turn, Claude is offered only the actions legal in the agent's current state,
     and every response's tokens are charged to ``agent.budget``. ``fallbacks`` re-runs
     refused requests on Anthropic's recommended fallback model (a beta feature; turn it
-    off on platforms without server-side fallbacks). Extra keyword arguments are passed
-    to ``messages.create``.
+    off on platforms without server-side fallbacks). After ``max_rejections`` rejected
+    calls in a row the run ends as ``stuck``. Extra keyword arguments are passed to
+    ``messages.create``.
     """
     messages = [{"role": "user", "content": prompt}] if isinstance(prompt, str) else list(prompt)
     text = ""
+    rejections = 0  # consecutive calls that were rejected
     for _ in range(max_turns):
         if agent.done:
             return RunResult("done", text, messages)
@@ -95,8 +98,11 @@ def run(
         results = []
         for c in calls:
             content, error = invoke(actions, c.name, c.input)
+            rejections = rejections + 1 if error else 0
             results.append(_result(c.id, with_next_step(agent, content), error))
         messages.append({"role": "user", "content": results})
+        if rejections >= max_rejections:
+            return RunResult("stuck", text, messages)
     return RunResult("done" if agent.done else "max_turns", text, messages)
 
 

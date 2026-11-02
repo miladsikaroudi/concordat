@@ -121,7 +121,8 @@ Each turn Claude is offered only the actions legal in the current state (a human
 step appears as a request that only the approver can decide), one call per
 response. Every response's tokens are charged to the agent's budget, and the next
 response is capped to what is left. Illegal or invalid calls go back to Claude as
-errors so it can correct itself. See [examples/refund.py](https://github.com/miladsikaroudi/concordat/blob/main/examples/refund.py).
+errors, ending with the actions allowed now, so it can correct itself; after three
+rejected calls in a row the run stops as `stuck` instead of looping. See [examples/refund.py](https://github.com/miladsikaroudi/concordat/blob/main/examples/refund.py).
 
 ### Running it with OpenAI
 

@@ -202,6 +202,7 @@ def test_max_turns() -> None:
         client,
         "hi",
         max_turns=3,
+        max_rejections=10,
     )
     assert result.status == "max_turns"
 
@@ -214,3 +215,32 @@ def test_zero_usd_budget_stops_before_any_request() -> None:
     result = run(Spent(approver=lambda s, r: True), client, "hi")
     assert result.status == "out_of_budget"
     assert client.requests == []
+
+
+def test_repeated_rejections_end_the_run_as_stuck() -> None:
+    client = FakeClient(*[reply(call("propose_refund", amount=1)) for _ in range(5)])
+    agent = RefundAgent(approver=lambda s, r: True)
+    result = run(agent, client, "hi")
+    assert result.status == "stuck"
+    assert len(client.requests) == 3  # stopped after three rejections, not at max_turns
+    assert last_results(result.messages)[0]["is_error"]  # the last call still got a result
+    assert agent.state == "start"
+
+
+def test_a_successful_call_resets_the_rejection_count() -> None:
+    client = FakeClient(
+        reply(call("propose_refund", amount=1)),
+        reply(call("propose_refund", amount=1)),
+        reply(call("verify_identity", user_id="u1")),  # legal: count goes back to zero
+        reply(call("approve_refund", proposal={"amount": 1})),  # not allowed yet
+        reply(call("approve_refund", proposal={"amount": 1})),
+        reply(say("Let me propose first."), stop="end_turn"),
+    )
+    result = run(RefundAgent(approver=lambda s, r: True), client, "hi")
+    assert result.status == "waiting"
+
+
+def test_max_rejections_is_configurable() -> None:
+    client = FakeClient(reply(call("propose_refund", amount=1)))
+    result = run(RefundAgent(approver=lambda s, r: True), client, "hi", max_rejections=1)
+    assert result.status == "stuck"
