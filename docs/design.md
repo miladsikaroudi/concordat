@@ -96,6 +96,9 @@ class RefundAgent(Agent):
 - `then` is a single next state, or a mapping from the method's return value to the
   next state. Branching is chosen by the tool result, or by which of several
   allowed tools the model calls.
+- `when` is one state or a set of states. A step legal in several states is offered
+  in each of them (the model only ever sees the current state's tools). Leaving out
+  `then` makes the step stay in its current state, which suits lookups.
 - `@human` steps can be *requested* by the model but only *decided* by the agent's
   `approver`, which receives the method's return value. Offering the request keeps
   the model from stalling in a state where only a human can move the protocol on.

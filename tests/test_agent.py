@@ -269,3 +269,62 @@ def test_diagram() -> None:
     )
     assert f"{s['awaiting_approval']} --> {s['denied']}: approve_refund (human rejected)" in diagram
     assert f"{s['refunded']} --> [*]" in diagram and f"{s['denied']} --> [*]" in diagram
+
+
+class LookupRefund(RefundAgent):
+    @tool(when={"start", "verified", "awaiting_approval"})
+    def look_up_order(self, order_id: str) -> str:
+        """A lookup that stays legal, and stays put, while the refund is in progress."""
+        return "order details"
+
+
+def test_a_tool_can_be_legal_in_several_states_and_stay_put() -> None:
+    p = LookupRefund.protocol
+    for state in ("start", "verified", "awaiting_approval"):
+        assert p.targets(state, "look_up_order") == {state}
+    agent = LookupRefund()
+    assert set(agent.allowed_tools()) == {"verify_identity", "look_up_order"}
+    agent.look_up_order("A-1")
+    assert agent.state == "start"
+    agent.verify_identity("u1")
+    agent.look_up_order("A-1")
+    assert agent.state == "verified"
+    assert set(agent.allowed_tools()) == {"propose_refund", "look_up_order"}
+    agent.propose_refund(5.0)
+    assert set(agent.allowed_tools()) == {"approve_refund", "look_up_order"}
+
+
+def test_a_multi_state_shortcut_is_still_rejected_by_the_parent() -> None:
+    with pytest.raises(ProtocolError, match="breaks RefundAgent's protocol"):
+
+        class Shortcut(RefundAgent):
+            @tool(when={"start", "verified"}, then="awaiting_approval")
+            def fast_track(self) -> str:
+                return "skipped verification"
+
+
+def test_when_must_name_a_state() -> None:
+    with pytest.raises(ValueError, match="names no state"):
+
+        class Empty(Agent):
+            final = {"done"}
+
+            @tool(when=set(), then="done")
+            def nothing(self) -> str:
+                return ""
+
+
+def test_human_step_in_several_states() -> None:
+    class Escalation(Agent):
+        final = {"closed"}
+
+        @tool(when="start", then="working")
+        def begin(self) -> str:
+            return "ok"
+
+        @human(when={"start", "working"}, approve="closed", reject="start")
+        def manager_closes(self) -> str:
+            return "Close the case?"
+
+    assert Escalation.protocol.actions("start") == {"begin", "manager_closes"}
+    assert Escalation.protocol.actions("working") == {"manager_closes"}

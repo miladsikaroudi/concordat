@@ -13,6 +13,9 @@ from .session import ProtocolViolation, Session
 P = ParamSpec("P")
 R = TypeVar("R")
 
+When = str | Collection[str]
+"""A state name, or the states in which a step is legal."""
+
 Approver = Callable[[str, Any], bool]
 """Decides a human step: gets the step name and the method's return value, returns approval."""
 
@@ -33,18 +36,23 @@ class Action:
 
 
 class _Step(Generic[P, R]):
-    """An agent method that is also a protocol action, legal only in state ``when``."""
+    """An agent method that is also a protocol action, legal only in the states ``when``."""
 
-    def __init__(self, fn: Callable[Concatenate[Any, P], Any], when: str, targets: Iterable[str]):
+    def __init__(self, fn: Callable[Concatenate[Any, P], Any], when: When, targets: Iterable[str]):
         self.fn = fn
-        self.when = when
-        self.targets = frozenset(targets)
+        self.when = frozenset({when} if isinstance(when, str) else when)
+        if not self.when:
+            raise ValueError(f"{fn.__name__}: 'when' names no state")
+        self.targets = frozenset(targets)  # empty: the step stays in its current state
         self.name = fn.__name__
         signature = inspect.signature(fn)
         self.signature = signature.replace(parameters=list(signature.parameters.values())[1:])
 
     def __set_name__(self, owner: type, name: str) -> None:
         self.name = name
+
+    def targets_from(self, state: str) -> frozenset[str]:
+        return self.targets or frozenset({state})
 
     @overload
     def __get__(self, agent: None, owner: type | None = None) -> _Step[P, R]: ...
@@ -70,18 +78,24 @@ class _Step(Generic[P, R]):
 
 class _Tool(_Step[P, R]):
     def __init__(
-        self, fn: Callable[Concatenate[Any, P], R], when: str, then: str | Mapping[Any, str]
+        self,
+        fn: Callable[Concatenate[Any, P], R],
+        when: When,
+        then: str | Mapping[Any, str] | None,
     ):
-        super().__init__(fn, when, {then} if isinstance(then, str) else then.values())
+        targets = () if then is None else {then} if isinstance(then, str) else then.values()
+        super().__init__(fn, when, targets)
         self.then = then
 
     def _run(self, agent: Agent, *args: P.args, **kwargs: P.kwargs) -> R:
         agent.budget.spend(tool_calls=1)
         result: R = self.fn(agent, *args, **kwargs)
-        agent.session.step(self.name, self._target(result))
+        agent.session.step(self.name, self._target(agent, result))
         return result
 
-    def _target(self, result: object) -> str:
+    def _target(self, agent: Agent, result: object) -> str:
+        if self.then is None:
+            return agent.session.state
         if isinstance(self.then, str):
             return self.then
         try:
@@ -95,7 +109,7 @@ class _Tool(_Step[P, R]):
 
 class _Human(_Step[P, bool]):
     def __init__(
-        self, fn: Callable[Concatenate[Any, P], Any], when: str, approve: str, reject: str
+        self, fn: Callable[Concatenate[Any, P], Any], when: When, approve: str, reject: str
     ):
         super().__init__(fn, when, {approve, reject})
         self.approve = approve
@@ -109,11 +123,12 @@ class _Human(_Step[P, bool]):
 
 
 def tool(
-    when: str, then: str | Mapping[Any, str]
+    when: When, then: str | Mapping[Any, str] | None = None
 ) -> Callable[[Callable[Concatenate[Any, P], R]], _Tool[P, R]]:
-    """A tool the model may call in state ``when``.
+    """A tool the model may call in state ``when`` (a state name, or a set of them).
 
     ``then`` is the next state, or a mapping from the method's return value to it.
+    Leave it out for a step that stays in the current state, such as a lookup.
     """
 
     def decorate(fn: Callable[Concatenate[Any, P], R]) -> _Tool[P, R]:
@@ -123,9 +138,9 @@ def tool(
 
 
 def human(
-    when: str, approve: str, reject: str
+    when: When, approve: str, reject: str
 ) -> Callable[[Callable[Concatenate[Any, P], Any]], _Human[P]]:
-    """A decision a human makes in state ``when``.
+    """A decision a human makes in state ``when`` (a state name, or a set of them).
 
     The model may request it, but only the approver decides: the method's return value
     is shown to the approver, and calling the method returns the decision.
@@ -165,7 +180,8 @@ class Agent:
             return
         transitions: dict[str, dict[str, frozenset[str]]] = {}
         for name, step in steps.items():
-            transitions.setdefault(step.when, {})[name] = step.targets
+            for state in step.when:
+                transitions.setdefault(state, {})[name] = step.targets_from(state)
         try:
             cls.protocol = Protocol(cls.initial, transitions, cls.final)
         except ProtocolError as e:

@@ -58,6 +58,10 @@ class RefundAgent(Agent):
     def approve_refund(self, amount: float) -> str:
         return f"Refund ${amount}?"         # shown to the human approver
 
+    @tool(when={"start", "verified", "awaiting_approval"})   # legal in several states
+    def order_status(self, order_id: str) -> str:            # no `then`: stays put
+        return lookup_order(order_id).status
+
 agent = RefundAgent()          # protocol already checked when the class was defined
 agent.allowed_tools()          # {'verify_identity': ...}: all the model gets to see
 agent.propose_refund(5000)     # ProtocolViolation, raised before the body runs
@@ -78,8 +82,11 @@ stateDiagram-v2
     [*] --> s3
     s0 --> s1: approve_refund (human rejected)
     s0 --> s2: approve_refund (human approved)
+    s0 --> s0: order_status
+    s3 --> s3: order_status
     s3 --> s1: verify_identity
     s3 --> s4: verify_identity
+    s4 --> s4: order_status
     s4 --> s0: propose_refund
     s1 --> [*]
     s2 --> [*]
